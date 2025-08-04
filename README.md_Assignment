@@ -1,0 +1,42 @@
+# 🪙 3D Coin Toss Simulation (OpenGL + GLUT)
+
+A visually appealing and interactive 3D coin toss simulator built using **C++**, **OpenGL**, and **GLUT**. This project demonstrates 3D graphics, animation, and basic physics (gravity) to simulate a realistic coin flip, complete with lighting and text overlay.
+
+---
+
+## 🎮 Features
+
+- 🌀 Realistic coin flip animation with rotation and gravity.
+- 🎯 Force a result to **HEADS** or **TAILS** using keyboard.
+- 🎲 Random toss via Spacebar.
+- ✨ Shiny gold material for coin using lighting and shading.
+- 📺 Result displayed in 3D and 2D overlay.
+
+---
+
+## 🧑‍💻 Controls
+
+| Key       | Action               |
+|-----------|----------------------|
+| `H`/`h`   | Force result: HEADS  |
+| `T`/`t`   | Force result: TAILS  |
+| `Space`   | Toss randomly        |
+| `Esc`     | Exit the application |
+
+---
+
+## 🧱 Built With
+
+- **C++**
+- **OpenGL**
+- **GLUT (FreeGLUT or GLUT)**
+
+---
+
+## 🚀 Getting Started
+
+### Prerequisites
+
+- OpenGL and GLUT/FreeGLUT installed on your system.
+
+
