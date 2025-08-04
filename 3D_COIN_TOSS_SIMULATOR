@@ -1,0 +1,218 @@
+#include <GL/glut.h>
+#include <cstdlib>
+#include <ctime>
+#include <cmath>
+
+// Coin states
+enum CoinState { IDLE, FLIPPING, RESULT };
+CoinState coinState = IDLE;
+
+float coinRotation = 0.0f;
+float coinRotationSpeed = 0.0f;
+float coinHeight = 0.0f;
+float coinFallSpeed = 0.0f;
+const float gravity = -0.005f;
+
+int forcedResult = -1; // -1 = random, 0 = HEADS, 1 = TAILS
+int result = -1;       // final result after toss
+bool showResult = false;
+
+int windowWidth = 800, windowHeight = 600;
+
+void drawText(float x, float y, const char* text) {
+    glRasterPos2f(x, y);
+    while (*text)
+        glutBitmapCharacter(GLUT_BITMAP_TIMES_ROMAN_24, *text++);
+}
+
+void drawCoin() {
+    glPushMatrix();
+    glTranslatef(0.0f, coinHeight, 0.0f);
+    glRotatef(coinRotation, 1, 0, 0);
+
+    // Gold material
+    GLfloat ambient[] = { 0.24725f, 0.1995f, 0.0745f, 1.0f };
+    GLfloat diffuse[] = { 0.75164f, 0.60648f, 0.22648f, 1.0f };
+    GLfloat specular[] = { 0.628281f, 0.555802f, 0.366065f, 1.0f };
+    glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, ambient);
+    glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, diffuse);
+    glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, specular);
+    glMaterialf(GL_FRONT_AND_BACK, GL_SHININESS, 51.2f);
+
+    GLUquadric* quad = gluNewQuadric();
+    gluCylinder(quad, 0.5, 0.5, 0.1, 50, 1);
+
+    // HEADS side
+    glPushMatrix();
+    glTranslatef(0.0f, 0.0f, 0.1f);
+    gluDisk(quad, 0.0f, 0.5f, 50, 1);
+    glDisable(GL_LIGHTING);
+    glColor3f(0, 0, 0);
+    glRasterPos2f(-0.15f, -0.1f);
+    const char* h = "HEADS";
+    for (int i = 0; h[i]; ++i) glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, h[i]);
+    glEnable(GL_LIGHTING);
+    glPopMatrix();
+
+    // TAILS side
+    glPushMatrix();
+    glRotatef(180, 1, 0, 0);
+    gluDisk(quad, 0.0f, 0.5f, 50, 1);
+    glDisable(GL_LIGHTING);
+    glColor3f(0, 0, 0);
+    glRasterPos2f(-0.15f, -0.1f);
+    const char* t = "TAILS";
+    for (int i = 0; t[i]; ++i) glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, t[i]);
+    glEnable(GL_LIGHTING);
+    glPopMatrix();
+
+    gluDeleteQuadric(quad);
+    glPopMatrix();
+}
+
+void display() {
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glLoadIdentity();
+    gluLookAt(0, 1.5, 3, 0, 0, 0, 0, 1, 0);
+
+    // Ground
+    glDisable(GL_LIGHTING);
+    glColor3f(0.2f, 0.6f, 0.2f);
+    glBegin(GL_QUADS);
+    glVertex3f(-2, -0.6, -2);
+    glVertex3f(2, -0.6, -2);
+    glVertex3f(2, -0.6, 2);
+    glVertex3f(-2, -0.6, 2);
+    glEnd();
+    glEnable(GL_LIGHTING);
+
+    drawCoin();
+
+    // Show result
+    if (showResult) {
+        glMatrixMode(GL_PROJECTION);
+        glPushMatrix();
+        glLoadIdentity();
+        gluOrtho2D(0, windowWidth, 0, windowHeight);
+        glMatrixMode(GL_MODELVIEW);
+        glPushMatrix();
+        glLoadIdentity();
+
+        glDisable(GL_LIGHTING);
+        glColor3f(1.0f, 1.0f, 0.0f);
+        if (result == 0)
+            drawText(windowWidth / 2 - 40, windowHeight - 50, "HEADS!");
+        else if (result == 1)
+            drawText(windowWidth / 2 - 40, windowHeight - 50, "TAILS!");
+        glEnable(GL_LIGHTING);
+
+        glPopMatrix();
+        glMatrixMode(GL_PROJECTION);
+        glPopMatrix();
+        glMatrixMode(GL_MODELVIEW);
+    }
+
+    glutSwapBuffers();
+}
+
+void update(int) {
+    if (coinState == FLIPPING) {
+        coinRotation += coinRotationSpeed;
+        if (coinRotation > 360) coinRotation -= 360;
+
+        coinHeight += coinFallSpeed;
+        coinFallSpeed += gravity;
+
+        if (coinHeight <= 0 && coinFallSpeed < 0) {
+            coinHeight = 0;
+            coinFallSpeed = 0;
+            coinRotationSpeed *= 0.6f;
+
+            if (fabs(coinRotationSpeed) < 1.0f) {
+                coinRotationSpeed = 0.0f;
+
+                // Determine final result
+                if (forcedResult == -1) {
+                    result = rand() % 2; // random
+                } else {
+                    result = forcedResult; // forced (H or T)
+                }
+
+                // Set final rotation
+                coinRotation = (result == 0) ? 0.0f : 180.0f;
+
+                coinState = RESULT;
+                showResult = true;
+            }
+        }
+    }
+
+    glutPostRedisplay();
+    glutTimerFunc(16, update, 0);
+}
+
+void keyboard(unsigned char key, int, int) {
+    if (coinState == FLIPPING) return;
+
+    if (key == 'h' || key == 'H') {
+        forcedResult = 0; // HEADS
+    } else if (key == 't' || key == 'T') {
+        forcedResult = 1; // TAILS
+    } else if (key == ' ') {
+        forcedResult = -1; // random
+    } else if (key == 27) {
+        exit(0);
+    } else {
+        return;
+    }
+
+    // Start toss
+    coinRotation = 0;
+    coinHeight = 0;
+    coinFallSpeed = 0.25f;
+    coinRotationSpeed = 60.0f;
+    showResult = false;
+    coinState = FLIPPING;
+}
+
+void reshape(int w, int h) {
+    windowWidth = w;
+    windowHeight = h;
+    glViewport(0, 0, w, h);
+    glMatrixMode(GL_PROJECTION);
+    glLoadIdentity();
+    gluPerspective(45.0f, (float)w / h, 0.1f, 100.0f);
+    glMatrixMode(GL_MODELVIEW);
+}
+
+void init() {
+    glClearColor(0.0f, 0.0f, 0.2f, 1.0f);
+    glEnable(GL_DEPTH_TEST);
+    glShadeModel(GL_SMOOTH);
+    glEnable(GL_LIGHTING);
+    glEnable(GL_LIGHT0);
+
+    GLfloat lightPos[] = { 1, 2, 3, 1 };
+    GLfloat amb[] = { 0.2f, 0.2f, 0.2f, 1 };
+    GLfloat diff[] = { 0.8f, 0.8f, 0.8f, 1 };
+    glLightfv(GL_LIGHT0, GL_POSITION, lightPos);
+    glLightfv(GL_LIGHT0, GL_AMBIENT, amb);
+    glLightfv(GL_LIGHT0, GL_DIFFUSE, diff);
+
+    srand(time(0));
+}
+
+int main(int argc, char** argv) {
+    glutInit(&argc, argv);
+    glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH);
+    glutInitWindowSize(windowWidth, windowHeight);
+    glutCreateWindow("3D Coin Toss - H / T / Space");
+
+    init();
+    glutDisplayFunc(display);
+    glutReshapeFunc(reshape);
+    glutKeyboardFunc(keyboard);
+    glutTimerFunc(0, update, 0);
+    glutMainLoop();
+    return 0;
+}
